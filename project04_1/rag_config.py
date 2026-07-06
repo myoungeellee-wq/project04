@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DEFAULT_CSV_PATH = r"./서울시 부동산 실거래가 정보_202606.csv"
+DEFAULT_CSV_PATH = r".\서울시 부동산 실거래가 정보_202606.csv"
 AUXILIARY_EMBEDDING_MODELS = [
     "intfloat/multilingual-e5-large",
     "BAAI/bge-large-zh-v1.5",
@@ -22,6 +22,8 @@ class RagConfig:
     collection_name: str = os.getenv("COLLECTION_NAME", "seoul_real_estate_202606")
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
+    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    ollama_temperature: float = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
 
 
 def safe_model_suffix(model_name: str) -> str:
@@ -52,4 +54,6 @@ def config_for_embedding_model(base_config: RagConfig, model_name: str) -> RagCo
         collection_name=collection_name,
         embedding_model=model_name,
         ollama_model=base_config.ollama_model,
+        ollama_base_url=base_config.ollama_base_url,
+        ollama_temperature=base_config.ollama_temperature,
     )

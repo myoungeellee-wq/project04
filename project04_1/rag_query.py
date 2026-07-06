@@ -76,7 +76,8 @@ def answer_question(
     top_k: int = 5,
     auxiliary_models: list[str] | None = None,
 ) -> tuple[str, list[dict[str, Any]], dict[str, float]]:
-    import ollama
+    from langchain_core.messages import HumanMessage, SystemMessage
+    from langchain_ollama import ChatOllama
 
     started_at = time.perf_counter()
     retrieve_started_at = time.perf_counter()
@@ -100,12 +101,16 @@ def answer_question(
     user_prompt = f"질문:\n{question}\n\n검색결과:\n{context_text}\n\n답변:"
 
     generation_started_at = time.perf_counter()
-    response = ollama.chat(
+    llm = ChatOllama(
         model=config.ollama_model,
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
+        base_url=config.ollama_base_url,
+        temperature=config.ollama_temperature,
+    )
+    response = llm.invoke(
+        [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=user_prompt),
+        ]
     )
     generation_seconds = time.perf_counter() - generation_started_at
     total_seconds = time.perf_counter() - started_at
@@ -114,4 +119,4 @@ def answer_question(
         "generation_seconds": generation_seconds,
         "total_seconds": total_seconds,
     }
-    return response["message"]["content"], contexts, timings
+    return response.content, contexts, timings

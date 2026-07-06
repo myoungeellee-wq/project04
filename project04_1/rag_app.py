@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 import streamlit as st
 
@@ -29,6 +30,16 @@ from word2vec_viz import (
 )
 
 
+def save_uploaded_csv(uploaded_file) -> str | None:
+    if uploaded_file is None:
+        return None
+    upload_dir = Path("uploaded_data")
+    upload_dir.mkdir(exist_ok=True)
+    uploaded_path = upload_dir / uploaded_file.name
+    uploaded_path.write_bytes(uploaded_file.getbuffer())
+    return str(uploaded_path)
+
+
 def build_config() -> RagConfig:
     base = RagConfig()
     return RagConfig(
@@ -37,6 +48,8 @@ def build_config() -> RagConfig:
         collection_name=st.session_state.collection_name.strip() or base.collection_name,
         embedding_model=st.session_state.embedding_model.strip() or base.embedding_model,
         ollama_model=st.session_state.ollama_model.strip() or base.ollama_model,
+        ollama_base_url=st.session_state.ollama_base_url.strip() or base.ollama_base_url,
+        ollama_temperature=float(st.session_state.ollama_temperature),
     )
 
 
@@ -65,6 +78,11 @@ def app() -> None:
     with st.sidebar:
         st.header("설정")
         base = RagConfig()
+        uploaded_file = st.file_uploader("CSV 파일 업로드", type=["csv"])
+        uploaded_path = save_uploaded_csv(uploaded_file)
+        if uploaded_path:
+            st.session_state.csv_path = uploaded_path
+            st.success(f"업로드 CSV 사용: {uploaded_file.name}")
         st.text_input("CSV 경로", value=os.getenv("CSV_PATH", base.csv_path), key="csv_path")
         st.text_input("ChromaDB 저장 폴더", value=os.getenv("CHROMA_DIR", "./chroma_db"), key="chroma_dir")
         st.text_input(
@@ -74,6 +92,19 @@ def app() -> None:
         )
         st.text_input("임베딩 모델", value=os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3"), key="embedding_model")
         st.text_input("Ollama 모델", value=os.getenv("OLLAMA_MODEL", "qwen2.5:7b"), key="ollama_model")
+        st.text_input(
+            "Ollama Base URL",
+            value=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+            key="ollama_base_url",
+        )
+        st.number_input(
+            "Ollama Temperature",
+            min_value=0.0,
+            max_value=2.0,
+            value=float(os.getenv("OLLAMA_TEMPERATURE", "0")),
+            step=0.1,
+            key="ollama_temperature",
+        )
         top_k = st.slider("검색 문서 수", min_value=1, max_value=15, value=5)
 
         if st.button("컬렉션 확인", use_container_width=True):
