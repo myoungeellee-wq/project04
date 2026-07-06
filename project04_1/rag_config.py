@@ -22,7 +22,7 @@ class RagConfig:
     collection_name: str = os.getenv("COLLECTION_NAME", "seoul_real_estate_202606")
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
-    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
     ollama_temperature: float = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
 
 
