@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DEFAULT_CSV_PATH = r"./서울시 부동산 실거래가 정보_202606.csv"
+DEFAULT_CSV_PATH = r"D:\AI_학습\AI_test\AI_3\dataset\서울시 부동산 실거래가 정보_202606.csv"
 AUXILIARY_EMBEDDING_MODELS = [
     "intfloat/multilingual-e5-large",
     "BAAI/bge-large-zh-v1.5",

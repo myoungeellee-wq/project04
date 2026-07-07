@@ -19,8 +19,10 @@ from analysis_viz import (
 )
 from documents import list_gu_names
 from index_data import ingest_csv_for_models
+from pdf_report import sar_report_to_pdf_bytes
 from rag_config import AUXILIARY_EMBEDDING_MODELS, RagConfig
-from rag_query import answer_question, get_existing_collection
+from rag_query import get_existing_collection
+from report_runner import ReportRunner
 from word2vec_viz import (
     network_figure,
     scatter_figure,
@@ -50,6 +52,40 @@ def build_config() -> RagConfig:
         ollama_model=st.session_state.ollama_model.strip() or base.ollama_model,
         ollama_base_url=st.session_state.ollama_base_url.strip() or base.ollama_base_url,
         ollama_temperature=float(st.session_state.ollama_temperature),
+    )
+
+
+@st.cache_resource(show_spinner=False)
+def get_cached_report_runner(
+    csv_path: str,
+    chroma_dir: str,
+    collection_name: str,
+    embedding_model: str,
+    ollama_model: str,
+    ollama_base_url: str,
+    ollama_temperature: float,
+) -> ReportRunner:
+    config = RagConfig(
+        csv_path=csv_path,
+        chroma_dir=chroma_dir,
+        collection_name=collection_name,
+        embedding_model=embedding_model,
+        ollama_model=ollama_model,
+        ollama_base_url=ollama_base_url,
+        ollama_temperature=ollama_temperature,
+    )
+    return ReportRunner(config)
+
+
+def build_report_runner(config: RagConfig) -> ReportRunner:
+    return get_cached_report_runner(
+        config.csv_path,
+        config.chroma_dir,
+        config.collection_name,
+        config.embedding_model,
+        config.ollama_model,
+        config.ollama_base_url,
+        config.ollama_temperature,
     )
 
 
@@ -94,7 +130,7 @@ def app() -> None:
         st.text_input("Ollama 모델", value=os.getenv("OLLAMA_MODEL", "qwen2.5:7b"), key="ollama_model")
         st.text_input(
             "Ollama Base URL",
-            value=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+            value=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
             key="ollama_base_url",
         )
         st.number_input(
@@ -210,6 +246,9 @@ def app() -> None:
                 st.session_state.pop("last_answer", None)
                 st.session_state.pop("last_sources", None)
                 st.session_state.pop("last_timings", None)
+                st.session_state.pop("last_question", None)
+                st.session_state.pop("last_auxiliary_models", None)
+                st.session_state.pop("last_sar_report", None)
 
         if ask_clicked:
             if not question.strip():
@@ -220,12 +259,13 @@ def app() -> None:
                 timer_area = st.empty()
                 status_area = st.empty()
                 started_at = time.perf_counter()
+                config = build_config()
+                report_runner = build_report_runner(config)
 
                 status_area.info("기존 ChromaDB에서 검색하고 Ollama로 답변을 생성하는 중입니다...")
                 with ThreadPoolExecutor(max_workers=1) as executor:
                     future = executor.submit(
-                        answer_question,
-                        build_config(),
+                        report_runner.run,
                         question.strip(),
                         int(top_k),
                         aux_models_for_query,
@@ -235,13 +275,19 @@ def app() -> None:
                         timer_area.metric("답변 생성 중 경과 시간", f"{elapsed:.1f}초")
                         time.sleep(0.2)
 
-                    answer, sources, timings = future.result()
+                    result = future.result()
+                    answer = result.answer
+                    sources = result.sources
+                    timings = result.timings
 
                 timer_area.metric("답변 생성 완료 시간", f"{timings.get('total_seconds', 0):.2f}초")
                 status_area.success("답변 생성 완료")
                 st.session_state.last_answer = answer
                 st.session_state.last_sources = sources
                 st.session_state.last_timings = timings
+                st.session_state.last_question = question.strip()
+                st.session_state.last_auxiliary_models = aux_models_for_query
+                st.session_state.last_sar_report = result.sar_report
             except Exception as exc:
                 st.error(f"답변 생성 실패: {exc}")
                 st.info("ChromaDB 폴더, 컬렉션 이름, 임베딩 모델이 기존 인덱스와 같은지 확인해주세요.")
@@ -255,6 +301,20 @@ def app() -> None:
                 timing_cols[1].metric("답변 생성 시간", f"{timings.get('generation_seconds', 0):.2f}초")
                 timing_cols[2].metric("전체 시간", f"{timings.get('total_seconds', 0):.2f}초")
             st.write(st.session_state.last_answer)
+
+            sar_report = st.session_state.get("last_sar_report", "")
+            with st.expander("SAR 보고서 보기"):
+                st.markdown(sar_report)
+            try:
+                sar_pdf = sar_report_to_pdf_bytes(sar_report)
+                st.download_button(
+                    label="SAR 보고서 PDF 다운로드",
+                    data=sar_pdf,
+                    file_name="sar_report.pdf",
+                    mime="application/pdf",
+                )
+            except Exception as exc:
+                st.error(f"SAR PDF 생성 실패: {exc}")
 
         if "last_sources" in st.session_state:
             st.subheader("검색 근거")

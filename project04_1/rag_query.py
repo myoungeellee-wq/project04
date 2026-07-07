@@ -76,6 +76,14 @@ def answer_question(
     top_k: int = 5,
     auxiliary_models: list[str] | None = None,
 ) -> tuple[str, list[dict[str, Any]], dict[str, float]]:
+    from report_runner import ReportRunner
+
+    return ReportRunner(config).answer(
+        question=question,
+        top_k=top_k,
+        auxiliary_models=auxiliary_models,
+    )
+
     from langchain_core.messages import HumanMessage, SystemMessage
     from langchain_ollama import ChatOllama
 

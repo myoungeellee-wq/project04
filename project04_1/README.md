@@ -104,6 +104,7 @@ streamlit run rag_app.py
 보조 임베딩 모델을 선택하면 모델별 별도 컬렉션에 저장됩니다. 예를 들어 기본 컬렉션이 `seoul_real_estate_202606`이면 보조 모델 컬렉션은 `seoul_real_estate_202606__intfloat_multilingual_e5_large`처럼 생성됩니다.
 
 `질문` 탭에서는 기본 컬렉션과 선택한 보조 모델 컬렉션을 함께 검색하고 Ollama로 답변을 생성합니다.
+답변 생성 후 SAR 보고서를 화면에서 확인하고 Markdown 파일로 다운로드할 수 있습니다.
 
 `면적당금액 3D` 탭에서는 거래금액, 건물면적, 면적당금액을 축으로 하는 3D 산점도와 자치구/용도별 면적당금액 분포를 제공합니다.
 
@@ -124,6 +125,7 @@ streamlit run rag_app.py
 - `index_data.py`: CSV 인덱싱 전용 CLI
 - `rag_query.py`: ChromaDB 검색과 Ollama 답변 생성
 - `rag_app.py`: Streamlit 질문 화면
+- `reporting.py`: SAR 보고서 생성
 
 ## 계산 필드
 
