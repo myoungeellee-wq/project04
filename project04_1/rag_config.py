@@ -21,8 +21,10 @@ class RagConfig:
     chroma_dir: str = os.getenv("CHROMA_DIR", "./chroma_db")
     collection_name: str = os.getenv("COLLECTION_NAME", "seoul_real_estate_202606")
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
+    ollama_provider: str = os.getenv("OLLAMA_PROVIDER", "local")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+    ollama_api_key: str = os.getenv("OLLAMA_API_KEY", "")
     ollama_temperature: float = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
 
 
@@ -53,7 +55,9 @@ def config_for_embedding_model(base_config: RagConfig, model_name: str) -> RagCo
         chroma_dir=base_config.chroma_dir,
         collection_name=collection_name,
         embedding_model=model_name,
+        ollama_provider=base_config.ollama_provider,
         ollama_model=base_config.ollama_model,
         ollama_base_url=base_config.ollama_base_url,
+        ollama_api_key=base_config.ollama_api_key,
         ollama_temperature=base_config.ollama_temperature,
     )

@@ -34,11 +34,18 @@ class ReportRunner:
         self.sar_template = sar_template or SarTemplate()
 
     def build_llm(self) -> ChatOllama:
-        return ChatOllama(
-            model=self.config.ollama_model,
-            base_url=self.config.ollama_base_url,
-            temperature=self.config.ollama_temperature,
-        )
+        kwargs: dict[str, Any] = {
+            "model": self.config.ollama_model,
+            "base_url": self.config.ollama_base_url,
+            "temperature": self.config.ollama_temperature,
+        }
+        if self.config.ollama_api_key:
+            kwargs["client_kwargs"] = {
+                "headers": {
+                    "Authorization": f"Bearer {self.config.ollama_api_key}",
+                }
+            }
+        return ChatOllama(**kwargs)
 
     def run(
         self,

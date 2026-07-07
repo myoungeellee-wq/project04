@@ -19,6 +19,7 @@ from analysis_viz import (
 )
 from documents import list_gu_names
 from index_data import ingest_csv_for_models
+from ollama_client import check_ollama_connection, normalize_ollama_base_url
 from pdf_report import sar_report_to_pdf_bytes
 from rag_config import AUXILIARY_EMBEDDING_MODELS, RagConfig
 from rag_query import get_existing_collection
@@ -49,8 +50,10 @@ def build_config() -> RagConfig:
         chroma_dir=st.session_state.chroma_dir.strip() or base.chroma_dir,
         collection_name=st.session_state.collection_name.strip() or base.collection_name,
         embedding_model=st.session_state.embedding_model.strip() or base.embedding_model,
+        ollama_provider=st.session_state.ollama_provider,
         ollama_model=st.session_state.ollama_model.strip() or base.ollama_model,
-        ollama_base_url=st.session_state.ollama_base_url.strip() or base.ollama_base_url,
+        ollama_base_url=normalize_ollama_base_url(st.session_state.ollama_base_url or base.ollama_base_url),
+        ollama_api_key=st.session_state.ollama_api_key.strip(),
         ollama_temperature=float(st.session_state.ollama_temperature),
     )
 
@@ -61,8 +64,10 @@ def get_cached_report_runner(
     chroma_dir: str,
     collection_name: str,
     embedding_model: str,
+    ollama_provider: str,
     ollama_model: str,
     ollama_base_url: str,
+    ollama_api_key: str,
     ollama_temperature: float,
 ) -> ReportRunner:
     config = RagConfig(
@@ -70,8 +75,10 @@ def get_cached_report_runner(
         chroma_dir=chroma_dir,
         collection_name=collection_name,
         embedding_model=embedding_model,
+        ollama_provider=ollama_provider,
         ollama_model=ollama_model,
         ollama_base_url=ollama_base_url,
+        ollama_api_key=ollama_api_key,
         ollama_temperature=ollama_temperature,
     )
     return ReportRunner(config)
@@ -83,8 +90,10 @@ def build_report_runner(config: RagConfig) -> ReportRunner:
         config.chroma_dir,
         config.collection_name,
         config.embedding_model,
+        config.ollama_provider,
         config.ollama_model,
         config.ollama_base_url,
+        config.ollama_api_key,
         config.ollama_temperature,
     )
 
@@ -127,12 +136,54 @@ def app() -> None:
             key="collection_name",
         )
         st.text_input("임베딩 모델", value=os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3"), key="embedding_model")
+        provider_options = {
+            "local": "Local/외부 Ollama 서버",
+            "cloud": "Ollama Cloud/Compatible API",
+        }
+        provider_default = os.getenv("OLLAMA_PROVIDER", "local")
+        provider_keys = list(provider_options.keys())
+        st.radio(
+            "Ollama 연결 방식",
+            provider_keys,
+            format_func=lambda key: provider_options[key],
+            index=provider_keys.index(provider_default) if provider_default in provider_keys else 0,
+            key="ollama_provider",
+            horizontal=False,
+        )
         st.text_input("Ollama 모델", value=os.getenv("OLLAMA_MODEL", "qwen2.5:7b"), key="ollama_model")
         st.text_input(
             "Ollama Base URL",
-            value=os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434"),
+            value=os.getenv(
+                "OLLAMA_BASE_URL",
+                "http://127.0.0.1:11434" if st.session_state.ollama_provider == "local" else "https://",
+            ),
             key="ollama_base_url",
+            help="로컬/외부 예: http://192.168.0.10:11434, Cloud 예: 공급자가 제공한 Ollama-compatible API URL",
         )
+        st.text_input(
+            "Ollama API Key",
+            value=os.getenv("OLLAMA_API_KEY", ""),
+            key="ollama_api_key",
+            type="password",
+            help="Cloud 또는 인증이 필요한 Ollama-compatible API에서만 입력합니다.",
+        )
+        if st.button("Ollama 연결 확인", use_container_width=True):
+            status = check_ollama_connection(
+                st.session_state.ollama_base_url,
+                st.session_state.ollama_model,
+                st.session_state.ollama_api_key,
+            )
+            if status.ok:
+                st.success(status.message)
+            else:
+                st.error(status.message)
+                if st.session_state.ollama_provider == "local":
+                    st.caption("외부 서버는 OLLAMA_HOST=0.0.0.0:11434 로 실행되어 있어야 합니다.")
+                else:
+                    st.caption("Cloud URL, API Key, 모델명이 맞는지 확인해주세요.")
+            if status.models:
+                with st.expander("외부 Ollama 모델 목록"):
+                    st.write(status.models)
         st.number_input(
             "Ollama Temperature",
             min_value=0.0,

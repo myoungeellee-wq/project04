@@ -106,6 +106,51 @@ streamlit run rag_app.py
 `질문` 탭에서는 기본 컬렉션과 선택한 보조 모델 컬렉션을 함께 검색하고 Ollama로 답변을 생성합니다.
 답변 생성 후 SAR 보고서를 화면에서 확인하고 Markdown 파일로 다운로드할 수 있습니다.
 
+### 외부 Ollama 연결
+
+Streamlit 사이드바의 `Ollama 연결 방식`에서 `Local/외부 Ollama 서버`를 선택하고 `Ollama Base URL`에 외부 Ollama 서버 주소를 입력합니다.
+
+```text
+http://192.168.0.10:11434
+http://your-ollama-server:11434
+```
+
+입력 후 `Ollama 연결 확인` 버튼을 누르면 `/api/tags`를 호출해 서버 연결과 모델 존재 여부를 확인합니다.
+
+외부 Ollama 서버에서는 다음처럼 외부 접속을 허용한 상태로 실행해야 합니다.
+
+```powershell
+$env:OLLAMA_HOST="0.0.0.0:11434"
+ollama serve
+```
+
+사용할 모델이 외부 서버에 없다면 외부 서버에서 먼저 내려받습니다.
+
+```powershell
+ollama pull qwen2.5:7b
+```
+
+### Ollama Cloud 또는 무료 Ollama-compatible 서버 연결
+
+Streamlit 사이드바에서 `Ollama 연결 방식`을 `Ollama Cloud/Compatible API`로 선택합니다.
+
+- `Ollama Base URL`: Cloud 또는 무료 서버에서 제공한 Ollama-compatible API 주소
+- `Ollama API Key`: 서버에서 발급받은 API Key
+- `Ollama 모델`: 서버에 등록된 모델명
+
+`Ollama 연결 확인` 버튼은 먼저 `/api/tags`를 확인하고, 실패하면 OpenAI-compatible 서버를 위해 `/v1/models`를 한 번 더 확인합니다.
+
+`.env`로 설정하려면 다음처럼 입력합니다.
+
+```text
+OLLAMA_PROVIDER=cloud
+OLLAMA_BASE_URL=https://your-cloud-ollama-endpoint
+OLLAMA_API_KEY=your_api_key
+OLLAMA_MODEL=qwen2.5:7b
+```
+
+공급자가 무료 서버를 제공하더라도 URL과 모델명은 서비스마다 다릅니다. Streamlit 화면에서 받은 값 그대로 입력하면 됩니다.
+
 `면적당금액 3D` 탭에서는 거래금액, 건물면적, 면적당금액을 축으로 하는 3D 산점도와 자치구/용도별 면적당금액 분포를 제공합니다.
 
 `법정동/용도 3D` 탭에서는 법정동, 건물용도, 면적당금액을 축으로 하는 3D 산점도와 법정동/용도별 면적당금액 중앙값 heatmap을 제공합니다.
