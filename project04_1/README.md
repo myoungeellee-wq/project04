@@ -151,6 +151,17 @@ OLLAMA_MODEL=qwen2.5:7b
 
 공급자가 무료 서버를 제공하더라도 URL과 모델명은 서비스마다 다릅니다. Streamlit 화면에서 받은 값 그대로 입력하면 됩니다.
 
+Streamlit Cloud에 배포할 때는 API Key를 코드나 공개 저장소의 `.env`에 넣지 말고 `Manage app` -> `Secrets`에 등록하세요.
+
+```toml
+OLLAMA_PROVIDER = "cloud"
+OLLAMA_BASE_URL = "https://your-cloud-ollama-endpoint"
+OLLAMA_API_KEY = "your_api_key"
+OLLAMA_MODEL = "qwen2.5:7b"
+```
+
+이미 노출된 API Key는 폐기하고 새 키를 발급받는 것을 권장합니다.
+
 `면적당금액 3D` 탭에서는 거래금액, 건물면적, 면적당금액을 축으로 하는 3D 산점도와 자치구/용도별 면적당금액 분포를 제공합니다.
 
 `법정동/용도 3D` 탭에서는 법정동, 건물용도, 면적당금액을 축으로 하는 3D 산점도와 법정동/용도별 면적당금액 중앙값 heatmap을 제공합니다.

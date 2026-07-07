@@ -39,10 +39,11 @@ class ReportRunner:
             "base_url": self.config.ollama_base_url,
             "temperature": self.config.ollama_temperature,
         }
-        if self.config.ollama_api_key:
+        api_key = getattr(self.config, "ollama_api_key", "")
+        if api_key:
             kwargs["client_kwargs"] = {
                 "headers": {
-                    "Authorization": f"Bearer {self.config.ollama_api_key}",
+                    "Authorization": f"Bearer {api_key}",
                 }
             }
         return ChatOllama(**kwargs)

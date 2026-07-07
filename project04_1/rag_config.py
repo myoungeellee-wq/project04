@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
+from typing import Any
 
-from dotenv import load_dotenv
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = None
 
 
-load_dotenv()
+if load_dotenv is not None:
+    load_dotenv()
 
-DEFAULT_CSV_PATH = r"D:\AI_학습\AI_test\AI_3\dataset\서울시 부동산 실거래가 정보_202606.csv"
+DEFAULT_CSV_PATH = r"./서울시 부동산 실거래가 정보_202606.csv"
 AUXILIARY_EMBEDDING_MODELS = [
     "intfloat/multilingual-e5-large",
     "BAAI/bge-large-zh-v1.5",
@@ -23,9 +28,14 @@ class RagConfig:
     embedding_model: str = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
     ollama_provider: str = os.getenv("OLLAMA_PROVIDER", "local")
     ollama_model: str = os.getenv("OLLAMA_MODEL", "qwen2.5:7b")
-    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
-    ollama_api_key: str = os.getenv("OLLAMA_API_KEY", "")
+#    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+    ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "https://ollama.com")
+    ollama_api_key: str = os.getenv("OLLAMA_API_KEY", "65c4afbda8d7440888298e47a2f37d0d.I-298aKBMtq8T4K0rdRMFZiD")
     ollama_temperature: float = float(os.getenv("OLLAMA_TEMPERATURE", "0"))
+
+def make_rag_config(**kwargs: Any) -> RagConfig:
+    valid_names = {field.name for field in fields(RagConfig)}
+    return RagConfig(**{key: value for key, value in kwargs.items() if key in valid_names})
 
 
 def safe_model_suffix(model_name: str) -> str:
@@ -50,14 +60,14 @@ def config_for_embedding_model(base_config: RagConfig, model_name: str) -> RagCo
         model_name,
         base_config.embedding_model,
     )
-    return RagConfig(
+    return make_rag_config(
         csv_path=base_config.csv_path,
         chroma_dir=base_config.chroma_dir,
         collection_name=collection_name,
         embedding_model=model_name,
-        ollama_provider=base_config.ollama_provider,
+        ollama_provider=getattr(base_config, "ollama_provider", "local"),
         ollama_model=base_config.ollama_model,
         ollama_base_url=base_config.ollama_base_url,
-        ollama_api_key=base_config.ollama_api_key,
+        ollama_api_key=getattr(base_config, "ollama_api_key", ""),
         ollama_temperature=base_config.ollama_temperature,
     )

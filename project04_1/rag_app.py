@@ -21,7 +21,7 @@ from documents import list_gu_names
 from index_data import ingest_csv_for_models
 from ollama_client import check_ollama_connection, normalize_ollama_base_url
 from pdf_report import sar_report_to_pdf_bytes
-from rag_config import AUXILIARY_EMBEDDING_MODELS, RagConfig
+from rag_config import AUXILIARY_EMBEDDING_MODELS, RagConfig, make_rag_config
 from rag_query import get_existing_collection
 from report_runner import ReportRunner
 from word2vec_viz import (
@@ -45,15 +45,15 @@ def save_uploaded_csv(uploaded_file) -> str | None:
 
 def build_config() -> RagConfig:
     base = RagConfig()
-    return RagConfig(
+    return make_rag_config(
         csv_path=st.session_state.csv_path.strip() or base.csv_path,
         chroma_dir=st.session_state.chroma_dir.strip() or base.chroma_dir,
         collection_name=st.session_state.collection_name.strip() or base.collection_name,
         embedding_model=st.session_state.embedding_model.strip() or base.embedding_model,
-        ollama_provider=st.session_state.ollama_provider,
+        ollama_provider=st.session_state.get("ollama_provider", getattr(base, "ollama_provider", "local")),
         ollama_model=st.session_state.ollama_model.strip() or base.ollama_model,
         ollama_base_url=normalize_ollama_base_url(st.session_state.ollama_base_url or base.ollama_base_url),
-        ollama_api_key=st.session_state.ollama_api_key.strip(),
+        ollama_api_key=st.session_state.get("ollama_api_key", "").strip(),
         ollama_temperature=float(st.session_state.ollama_temperature),
     )
 
@@ -70,7 +70,7 @@ def get_cached_report_runner(
     ollama_api_key: str,
     ollama_temperature: float,
 ) -> ReportRunner:
-    config = RagConfig(
+    config = make_rag_config(
         csv_path=csv_path,
         chroma_dir=chroma_dir,
         collection_name=collection_name,
@@ -167,6 +167,8 @@ def app() -> None:
             type="password",
             help="Cloud 또는 인증이 필요한 Ollama-compatible API에서만 입력합니다.",
         )
+        if st.session_state.ollama_provider == "cloud" and normalize_ollama_base_url(st.session_state.ollama_base_url) == "https://ollama.com":
+            st.warning("`https://ollama.com`은 웹사이트 주소일 수 있습니다. Cloud API에서 제공한 실제 endpoint URL을 입력해주세요.")
         if st.button("Ollama 연결 확인", use_container_width=True):
             status = check_ollama_connection(
                 st.session_state.ollama_base_url,
